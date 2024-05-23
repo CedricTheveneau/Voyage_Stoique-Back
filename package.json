@@ -5,7 +5,8 @@
   "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "node --watch -- server"
+    "dev": "node --watch -- server",
+    "start": "nodemon --legacy-watch server.js"
   },
   "repository": {
     "type": "git",
@@ -27,6 +28,7 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.4.0",
     "mongoose-unique-validator": "^5.0.0",
+    "nodemon": "^3.1.0",
     "swagger-ui-express": "^5.0.0",
     "yaml": "^2.4.2"
   }
