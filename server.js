@@ -3,7 +3,7 @@ const app = require("./app.js");
 const port = process.env.PORT;
 const projectName = process.env.PROJECT_NAME;
 
-app.get("/", (req, res) => {
+app.get("/api", (req, res) => {
   res.send(`You're now live on ${projectName}`);
 });
 
