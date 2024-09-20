@@ -4,7 +4,7 @@ const articleCtrl = require("../controllers/article.js");
 
 router.post("/create", articleCtrl.create);
 router.get("/", articleCtrl.getAll);
-router.get("/:id", articleCtrl.getKard);
+router.get("/:id", articleCtrl.getArticle);
 router.put("/:id", articleCtrl.update);
 router.delete("/:id", articleCtrl.delete);
 
