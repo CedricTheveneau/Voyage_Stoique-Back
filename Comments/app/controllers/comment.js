@@ -3,32 +3,14 @@ const Comment = require("../models/comment");
 exports.create = async (req, res) => {
   try {
     const {
-      profilePic,
-      firstName,
-      lastName,
-      job,
-      currentCompany,
-      currentCompanyAdress,
-      skills,
-      qrCode,
-      contactEmail,
-      contactTel,
-      ctaText,
-      ctalink,
+      author,
+      content,
+      parentComment,
     } = req.body;
     const comment = new Comment({
-      profilePic,
-      firstName,
-      lastName,
-      job,
-      currentCompany,
-      currentCompanyAdress,
-      skills,
-      qrCode,
-      contactEmail,
-      contactTel,
-      ctaText,
-      ctalink,
+      author,
+      content,
+      parentComment,
     });
     await comment.save();
     res.status(201).json(comment);
@@ -54,7 +36,7 @@ exports.getAll = async (req, res) => {
     res.status(500).json({
       message:
         err.message ||
-        "Something wrong happened with your request to retrieve your accounts.",
+        "Something wrong happened with your request to retrieve comments.",
     });
   }
 };
@@ -79,39 +61,45 @@ exports.getComment = async (req, res) => {
   }
 };
 
+exports.getCommentsByAuthor = async (req, res) => {
+  try {
+    let comments = await Comment.find({
+      author: req.params.id,
+    });
+    if (!comments) {
+      return res.status(404).json({
+        message: "Didn't find the comments you were looking for.",
+      });
+    }
+    res.status(200).json(comment);
+  } catch (err) {
+    res.status(500).json({
+      message:
+        err.message ||
+        "Something wrong happened with your request to retrieve your comments.",
+    });
+  }
+};
+
 exports.update = async (req, res) => {
   try {
     const {
-      profilePic,
-      firstName,
-      lastName,
-      job,
-      currentCompany,
-      currentCompanyAdress,
-      skills,
-      qrCode,
-      contactEmail,
-      contactTel,
-      ctaText,
-      ctalink,
+      author,
+      content,
+      parentComment,
+      upvotes
     } = req.body;
+    const lastModifiedDate = Date.now();
     const comment = await Comment.findOneAndUpdate(
       {
         _id: req.params.id,
       },
       {
-        profilePic,
-        firstName,
-        lastName,
-        job,
-        currentCompany,
-        currentCompanyAdress,
-        skills,
-        qrCode,
-        contactEmail,
-        contactTel,
-        ctaText,
-        ctalink,
+        author,
+      content,
+      parentComment,
+      lastModifiedDate,
+      upvotes
       },
       { returnDocument: "after" }
     );

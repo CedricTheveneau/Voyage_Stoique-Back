@@ -1,11 +1,16 @@
 const express = require("express");
 const router = express();
 const postCtrl = require("../controllers/post.js");
+const {uploadDirectory, upload, compressImage } = require("../middlewares/imgUpload");
 
-router.post("/create", postCtrl.create);
-router.get("/", postCtrl.getAll);
+router.post("/create", uploadDirectory, upload.single('cover'), compressImage, postCtrl.create);
+router.get("/admin/", postCtrl.getAll);
 router.get("/:id", postCtrl.getPost);
-router.put("/:id", postCtrl.update);
+router.get("/keyword/:keyword", postCtrl.getPostsByKeyword);
+router.get("/category/:category", postCtrl.getPostsByCategory);
+router.get("/author/:id", postCtrl.getPostsByAuthor);
+router.put("/:id", uploadDirectory, upload.single('cover'), compressImage, postCtrl.update);
 router.delete("/:id", postCtrl.delete);
+
 
 module.exports = router;

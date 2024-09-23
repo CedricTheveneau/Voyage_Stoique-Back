@@ -2,84 +2,89 @@ const mongoose = require("mongoose");
 const uniqueValidator = require("mongoose-unique-validator");
 
 const articleSchema = new mongoose.Schema({
-  profilePic: {
+  title: {
     type: String,
-    required: [true, "The profile picture field is required"],
-    unique: [true, "This image URL is already in use"],
+    required: [true, "The title field is required"],
+    trim: true,
+    unique: true,
+    lowercase: true,
+  },
+  intro: {
+    type: String,
+    required: [true, "The intro field is required"],
+    trim: true,
+    unique: true,
+    lowercase: false,
+  },
+  cover: {
+    type: String,
+    required: [true, "The cover field is required"],
+    unique: [true, "This image is already used by an existing article"],
     trim: true,
     lowercase: false,
   },
-  firstName: {
+  content: {
     type: String,
-    required: [true, "The first name field is required"],
-    unique: false,
+    required: [true, "The content field is required"],
+    unique: [true, "You are trying to copy an already existing article"],
     trim: true,
-    lowercase: true,
+    lowercase: false,
   },
-  lastName: {
-    type: String,
-    required: [true, "The last name field is required"],
-    unique: false,
-    trim: true,
-    lowercase: true,
-  },
-  job: {
-    type: String,
-    required: [true, "The job field is required"],
-    trim: true,
-    unique: false,
-    lowercase: true,
-  },
-  currentCompany: {
+  audio: {
     type: String,
     required: false,
+    default: null,
+    unique: [true, "This audio file is already used by an existing article"],
     trim: true,
-    unique: false,
-    lowercase: true,
+    lowercase: false,
   },
-  currentCompanyAdress: {
-    type: String,
-    required: false,
-    unique: false,
-    trim: true,
-    lowercase: true,
+  publishDate: {
+    type: Date,
+    required: [true, "The publish date field is required"],
+    default: Date.now(),
   },
-  skills: {
+  lastModifiedDate: {
+    type: Date,
+    required: [true, "The last modified date field is required"],
+    default: Date.now(),
+  },
+  keywords: {
     type: [String],
     required: false,
+    default: [],
   },
-  qrCode: {
+  category: {
     type: String,
-    required: false,
-    trim: true,
-    lowercase: true,
-    unique: true,
+    enum: ["user", "admin"],
+    required: [true, "The category field is required"],
   },
-  contactEmail: {
+  upvotes: {
+    type: [String],
+    required: [true, "The upvotes field is required"],
+    default: [],
+  },
+  comments: {
+    type: [Number],
+    required: [true, "The comments field is required"],
+    default: [],
+  },
+  savedNumber: {
+    type: [String],
+    required: [true, "The saved number field is required"],
+    default: [],
+  },
+  author: {
     type: String,
-    required: [true, "The contact email field is required"],
-    trim: true,
-    lowercase: true,
-    unique: false,
+    required: [true, "The author field is required"],
   },
-  contactTel: {
+  reads: {
+    type: [String],
+    required: [true, "The reads field is required"],
+    default: [],
+  },
+  readingTime: {
     type: Number,
-    required: [true, "The contact number field is required"],
-  },
-  ctaText: {
-    type: String,
-    required: false,
-    unique: false,
-    trim: true,
-    lowercase: false,
-    default: "Let's work together !",
-  },
-  ctalink: {
-    type: String,
-    required: [true, "The button link field is required"],
-    unique: false,
-    trim: true,
-    lowercase: false,
+    required: [true, "The readingTime field is required"],
   },
 });
 
