@@ -2,85 +2,36 @@ const mongoose = require("mongoose");
 const uniqueValidator = require("mongoose-unique-validator");
 
 const commentSchema = new mongoose.Schema({
-  profilePic: {
+  author: {
     type: String,
-    required: [true, "The profile picture field is required"],
-    unique: [true, "This image URL is already in use"],
+    required: [true, "The author field is required"],
+  },
+  content: {
+    type: String,
+    required: [true, "The content field is required"],
     trim: true,
     lowercase: false,
   },
-  firstName: {
+  parentComment: {
     type: String,
-    required: [true, "The first name field is required"],
-    unique: false,
-    trim: true,
-    lowercase: true,
+    required: [true, "The parent comment field is required"],
+    default: null,
   },
-  lastName: {
-    type: String,
-    required: [true, "The last name field is required"],
-    unique: false,
-    trim: true,
-    lowercase: true,
+  publishDate: {
+    type: Date,
+    required: [true, "The publish date field is required"],
+    default: Date.now(),
   },
-  job: {
-    type: String,
-    required: [true, "The job field is required"],
-    trim: true,
-    unique: false,
-    lowercase: true,
+  lastModifiedDate: {
+    type: Date,
+    required: [true, "The last modified date field is required"],
+    default: Date.now(),
   },
-  currentCompany: {
-    type: String,
-    required: false,
-    trim: true,
-    unique: false,
-    lowercase: true,
-  },
-  currentCompanyAdress: {
-    type: String,
-    required: false,
-    unique: false,
-    trim: true,
-    lowercase: true,
-  },
-  skills: {
+  upvotes: {
     type: [String],
-    required: false,
-  },
-  qrCode: {
-    type: String,
-    required: false,
-    trim: true,
-    lowercase: true,
-    unique: true,
-  },
-  contactEmail: {
-    type: String,
-    required: [true, "The contact email field is required"],
-    trim: true,
-    lowercase: true,
-    unique: false,
-  },
-  contactTel: {
-    type: Number,
-    required: [true, "The contact number field is required"],
-  },
-  ctaText: {
-    type: String,
-    required: false,
-    unique: false,
-    trim: true,
-    lowercase: false,
-    default: "Let's work together !",
-  },
-  ctalink: {
-    type: String,
-    required: [true, "The button link field is required"],
-    unique: false,
-    trim: true,
-    lowercase: false,
-  },
+    required: [true, "The upvotes field is required"],
+    default: [],
+  }
 });
 
 commentSchema.plugin(uniqueValidator);
