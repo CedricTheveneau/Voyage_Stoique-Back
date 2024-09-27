@@ -1,43 +1,38 @@
 const Post = require("../models/post");
-const { upload, compressImage } = require("../middlewares/imgUpload");
 
 exports.create = async (req, res) => {
-  upload.single("cover")(req, res, async (err) => {
-    if (err instanceof multer.MulterError) {
-      return res.status(400).json({ message: err.message });
-    } else if (err) {
-      return res.status(500).json({ message: err.message });
-    }
-    await compressImage(req, res, async (err) => {
-      if (err) {
-        return res.status(500).json({ message: err.message });
-      }
-      try {
-        const {
-          title,
+  const err = req.file ? null : new Error("File upload failed.");
+
+  if (err instanceof multer.MulterError) {
+    return res.status(400).json({ message: err.message });
+  } else if (err) {
+    return res.status(500).json({ message: err.message });
+  }
+
+  try {
+    const {
+      title,
       content,
       keywords,
       category,
       author
-        } = req.body;
-        const cover = req.file ? req.file.path : null;
-        const post = new Post({
-          title,
+    } = req.body;
+    const cover = req.file ? req.file.path : null; // Le chemin du fichier uploadé
+    const post = new Post({
+      title,
       cover,
       content,
       keywords,
       category,
       author
-        });
-        await post.save();
-        res.status(201).json(post);
-      } catch (err) {
-        res.status(500).json({
-          message: err.message || "Something went wrong while creating the post.",
-        });
-      }
     });
-  });
+    await post.save();
+    res.status(201).json(post);
+  } catch (err) {
+    res.status(500).json({
+      message: err.message || "Something went wrong while creating the post.",
+    });
+  }
 };
 
 exports.getAll = async (req, res) => {
@@ -139,19 +134,31 @@ exports.getPostsByAuthor = async (req, res) => {
 };
 
 exports.update = async (req, res) => {
-  upload.single("cover")(req, res, async (err) => {
-    if (err instanceof multer.MulterError) {
-      return res.status(400).json({ message: err.message });
-    } else if (err) {
-      return res.status(500).json({ message: err.message });
+  try {
+    const post = await Post.findById(req.params.id);
+    if (!post) {
+      return res.status(404).json({ message: "Post not found." });
     }
-    await compressImage(req, res, async (err) => {
-      if (err) {
-        return res.status(500).json({ message: err.message });
+
+    // Vérifie si l'utilisateur est l'auteur du post
+    if (post.author.toString() !== req.auth.userId && req.auth.userRole !== "admin") {
+      return res.status(403).json({ message: "You are not authorized to update this post." });
+    }
+
+    // Vérifie si un fichier a été uploadé
+    if (req.file) {
+      if (post.cover) {
+        const oldImagePath = path.join(__dirname, "../..", post.cover);
+        fs.unlink(oldImagePath, (err) => {
+          if (err) console.error("Failed to delete old image:", err);
+        });
       }
-      try {
-        const {
-          title,
+      post.cover = req.file.path; // Mise à jour du chemin du cover
+    }
+
+    // Mise à jour des autres champs
+    const {
+      title,
       content,
       keywords,
       category,
@@ -159,62 +166,64 @@ exports.update = async (req, res) => {
       comments,
       savedNumber,
       reads
-        } = req.body;
+    } = req.body;
 
-        const lastModifiedDate = Date.now();
+    post.title = title;
+    post.content = content;
+    post.keywords = keywords;
+    post.category = category;
+    post.upvotes = upvotes;
+    post.comments = comments;
+    post.savedNumber = savedNumber;
+    post.reads = reads;
+    post.lastModifiedDate = Date.now(); // Date de dernière modification
 
-        const post = await Post.findById(req.params.id);
-        if (!post) {
-          return res.status(404).json({ message: "Post not found." });
-        }
-        if (req.file) {
-          if (post.cover) {
-            const oldImagePath = path.join(__dirname, "../..", post.cover);
-            fs.unlink(oldImagePath, (err) => {
-              if (err) console.error("Failed to delete old image:", err);
-            });
-          }
-          post.cover = req.file.path;
-        }
-        post.title = title,
-      post.content = content,
-      post.keywords = keywords,
-      post.category = category,
-      post.upvotes = upvotes,
-      post.comments = comments,
-      post.savedNumber = savedNumber,
-      post.reads = reads,
-        post.lastModifiedDate = lastModifiedDate;
-        await post.save();
-        res.status(200).json(post);
-      } catch (err) {
-        res.status(500).json({
-          message: err.message || "Something went wrong with updating the post.",
-        });
-      }
+    await post.save();
+    res.status(200).json(post);
+  } catch (err) {
+    res.status(500).json({
+      message: err.message || "Something went wrong with updating the post.",
     });
-  });
+  }
 };
 
 exports.delete = async (req, res) => {
   try {
-    const post = await Post.findOneAndDelete({
-      _id: req.params.id,
-    });
+    // Recherche du post par ID
+    const post = await Post.findById(req.params.id);
     if (!post) {
       return res.status(404).json({
         message: "Didn't find the post you were looking for.",
       });
     }
+
+    // Vérification si l'utilisateur est l'auteur du post
+    if (post.author.toString() !== req.auth.userId && req.auth.userRole !== "admin") {
+      return res.status(403).json({
+        message: "You do not have permission to delete this post.",
+      });
+    }
+
+    // Suppression de l'image si elle existe
+    if (post.cover) {
+      const imagePath = path.join(__dirname, "../..", post.cover);
+      fs.unlink(imagePath, (err) => {
+        if (err) console.error("Failed to delete old image:", err);
+      });
+    }
+
+    // Suppression du post
+    await Post.findByIdAndDelete(req.params.id);
+
     res.status(200).json({
-      message: "The fellowing post has been deleted successfully.",
+      message: "The following post has been deleted successfully.",
       post: post,
     });
   } catch (err) {
     res.status(500).json({
       message:
         err.message ||
-        "Something wrong happened with your request to delete your post.",
+        "Something went wrong with your request to delete your post.",
     });
   }
 };
