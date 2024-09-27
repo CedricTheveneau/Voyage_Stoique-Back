@@ -51,6 +51,16 @@ exports.login = async (req, res) => {
 
 exports.update = async (req, res) => {
   try {
+    const userCheck = await User.findById(req.params.id);
+
+    if (!userCheck) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    if (userCheck._id !== req.auth.userId && req.auth.userRole !== "admin") {
+      return res.status(403).json({ message: "You are not authorized to update this user." });
+    }
+
     const {
       username, email, password, birthday, newsSubscription, lastConnected, upvotedArticles, upvotedPosts, savedArticles, savedPosts, articlesHistory, postsHistory, strikes
     } = req.body;
@@ -63,11 +73,6 @@ exports.update = async (req, res) => {
       },
       { returnDocument: "after" }
     );
-    if (!user) {
-      return res.status(404).json({
-        message: "Didn't find the user you were looking for.",
-      });
-    }
     res.status(200).json(user);
   } catch (err) {
     res.status(500).json({
@@ -80,17 +85,24 @@ exports.update = async (req, res) => {
 
 exports.delete = async (req, res) => {
   try {
-    const user = await Article.findOneAndDelete({
-      _id: req.params.id,
-    });
-    if (!user) {
+    const userCheck = await Post.findById(req.params.id);
+    if (!userCheck) {
       return res.status(404).json({
         message: "Didn't find the user you were looking for.",
       });
     }
+
+    if (userCheck._id !== req.auth.userId && req.auth.userRole !== "admin") {
+      return res.status(403).json({
+        message: "You do not have permission to delete this user.",
+      });
+    }
+
+    await User.findByIdAndDelete(req.params.id);
+    
     res.status(200).json({
       message: "The fellowing user has been deleted successfully.",
-      user: user,
+      user: userCheck,
     });
   } catch (err) {
     res.status(500).json({

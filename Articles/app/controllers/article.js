@@ -1,5 +1,4 @@
 const Article = require("../models/article");
-const { upload, compressImage } = require("../middlewares/imgUpload");
 
 
 // exports.create = async (req, res) => {
@@ -49,6 +48,11 @@ const { upload, compressImage } = require("../middlewares/imgUpload");
 
 exports.create = async (req, res) => {
   try {
+    if (req.auth.userRole !== "admin") {
+      return res.status(403).json({
+        message: "You do not have permission to create an article.",
+      });
+    }
     if (req.fileValidationError) {
       return res.status(400).json({ message: req.fileValidationError });
     }
@@ -247,6 +251,11 @@ exports.getArticlesByAuthor = async (req, res) => {
 
 exports.updateAdmin = async (req, res) => {
   try {
+    if (req.auth.userRole !== "admin") {
+      return res.status(403).json({
+        message: "You do not have permission to update this article.",
+      });
+    }
     const {
       title,
       intro,
@@ -304,6 +313,11 @@ exports.updateAdmin = async (req, res) => {
 
 exports.updateUser = async (req, res) => {
   try {
+    if (req.auth.userRole === "guest") {
+      return res.status(403).json({
+        message: "You do not have permission to update this article.",
+      });
+    }
     const {
       upvotes,
       comments,
@@ -339,17 +353,31 @@ exports.updateUser = async (req, res) => {
 
 exports.delete = async (req, res) => {
   try {
-    const article = await Article.findOneAndDelete({
-      _id: req.params.id,
-    });
-    if (!article) {
-      return res.status(404).json({
-        message: "Didn't find the article you were looking for.",
+    if (req.auth.userRole !== "admin") {
+      return res.status(403).json({
+        message: "You do not have permission to delete this post.",
       });
     }
+    const articleCheck = await Article.findById(req.params.id);
+  if (!articleCheck) {
+    return res.status(404).json({
+      message: "Didn't find the article you were looking for.",
+    });
+  }
+  if (articleCheck.cover) {
+    fs.unlink(articleCheck.cover, (err) => {
+      if (err) console.error("Failed to delete old image:", err);
+    });
+  }
+  if (articleCheck.audio) {
+    fs.unlink(articleCheck.audio, (err) => {
+      if (err) console.error("Failed to delete old image:", err);
+    });
+  }
+  await Article.findByIdAndDelete(req.params.id);
     res.status(200).json({
       message: "The fellowing article has been deleted successfully.",
-      article: article,
+      article: articleCheck,
     });
   } catch (err) {
     res.status(500).json({
@@ -358,4 +386,5 @@ exports.delete = async (req, res) => {
         "Something wrong happened with your request to delete your article.",
     });
   }
+  
 };
