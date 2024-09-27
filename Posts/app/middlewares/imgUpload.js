@@ -1,8 +1,8 @@
 const multer = require("multer");
-const sharp = require("sharp");
 const path = require("path");
 const fs = require("fs");
 
+// Middleware to ensure upload directory exists
 const uploadDirectory = (req, res, next) => {
   const uploadDir = path.join(__dirname, "../uploads/images");
 
@@ -10,12 +10,25 @@ const uploadDirectory = (req, res, next) => {
     fs.mkdirSync(uploadDir, { recursive: true });
   }
   next();
-}
+};
 
-const storage = multer.memoryStorage();
+// Configure Multer to store files on disk
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadDir = path.join(__dirname, "../uploads/images");
+    cb(null, uploadDir);  // Store files in the upload directory
+  },
+  filename: (req, file, cb) => {
+    const timestamp = Date.now();
+    const ext = path.extname(file.originalname);  // Get the file extension
+    const filename = `${timestamp}${ext}`;  // Create a unique filename
+    cb(null, filename);
+  },
+});
+
 const upload = multer({
   storage: storage,
-  limits: { fileSize: 1 * 1024 * 1024 },
+  limits: { fileSize: 1 * 1024 * 1024 },  // 1 MB limit
   fileFilter: (req, file, cb) => {
     const filetypes = /jpeg|jpg|png/;
     const mimetype = filetypes.test(file.mimetype);
@@ -28,25 +41,5 @@ const upload = multer({
   },
 });
 
-// Middleware to compress the image using sharp
-const compressImage = async (req, res, next) => {
-  if (!req.file) return next();
-
-  const timestamp = Date.now();
-  const filename = `${timestamp}.jpeg`;
-  const outputPath = path.join(__dirname, "../uploads/images", filename);
-
-  try {
-    await sharp(req.file.buffer)
-      .resize(1200)
-      .jpeg({ quality: 80 })
-      .toFile(outputPath);
-
-    req.file.path = `/uploads/images/${filename}`;
-    next();
-  } catch (err) {
-    return res.status(500).json({ message: "Image compression failed.", error: err.message });
-  }
-};
-
-module.exports = {uploadDirectory, upload, compressImage };
+// Export the middleware
+module.exports = { uploadDirectory, upload };
