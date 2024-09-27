@@ -2,6 +2,11 @@ const Comment = require("../models/comment");
 
 exports.create = async (req, res) => {
   try {
+    if (req.auth.userRole === "guest") {
+      return res.status(403).json({
+        message: "You do not have permission to create a comment.",
+      });
+    }
     const {
       author,
       content,
@@ -83,6 +88,17 @@ exports.getCommentsByAuthor = async (req, res) => {
 
 exports.update = async (req, res) => {
   try {
+
+    const commentCheck = await User.findById(req.params.id);
+
+    if (!commentCheck) {
+      return res.status(404).json({ message: "Comment not found." });
+    }
+  
+    if (commentCheck.author !== req.auth.userId && req.auth.userRole !== "admin") {
+      return res.status(403).json({ message: "You are not authorized to update this comment." });
+    }
+
     const {
       author,
       content,
@@ -103,11 +119,6 @@ exports.update = async (req, res) => {
       },
       { returnDocument: "after" }
     );
-    if (!comment) {
-      return res.status(404).json({
-        message: "Didn't find the comment you were looking for.",
-      });
-    }
     res.status(200).json(comment);
   } catch (err) {
     res.status(500).json({
@@ -120,17 +131,23 @@ exports.update = async (req, res) => {
 
 exports.delete = async (req, res) => {
   try {
-    const comment = await Comment.findOneAndDelete({
-      _id: req.params.id,
-    });
-    if (!comment) {
+    const commentCheck = await Post.findById(req.params.id);
+    if (!commentCheck) {
       return res.status(404).json({
         message: "Didn't find the comment you were looking for.",
       });
     }
+
+    if (commentCheck.author !== req.auth.userId && req.auth.userRole !== "admin") {
+      return res.status(403).json({
+        message: "You do not have permission to delete this comment.",
+      });
+    }
+
+    await Comment.findByIdAndDelete(req.params.id);
     res.status(200).json({
       message: "The fellowing comment has been deleted successfully.",
-      comment: comment,
+      comment: commentCheck,
     });
   } catch (err) {
     res.status(500).json({

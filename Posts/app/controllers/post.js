@@ -1,6 +1,11 @@
 const Post = require("../models/post");
 
 exports.create = async (req, res) => {
+  if (req.auth.userRole === "guest") {
+    return res.status(403).json({
+      message: "You do not have permission to create a post.",
+    });
+  }
   const err = req.file ? null : new Error("File upload failed.");
 
   if (err instanceof multer.MulterError) {
@@ -17,7 +22,9 @@ exports.create = async (req, res) => {
       category,
       author
     } = req.body;
-    const cover = req.file ? req.file.path : null; // Le chemin du fichier uploadé
+    const cover = `${req.protocol}://${req.get("host")}/uploads/${
+      req.file.filename
+    }`;
     const post = new Post({
       title,
       cover,
