@@ -12,9 +12,10 @@ module.exports = async (req, res, next) => {
         },
       });
 
-      const { userRole } = response.data;
+      const { userId, userRole } = response.data;
 
       req.userRole = userRole;
+      req.userId = userId;
     } else {
       req.userRole = "guest";
     }

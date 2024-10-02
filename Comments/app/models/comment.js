@@ -14,7 +14,6 @@ const commentSchema = new mongoose.Schema({
   },
   parentComment: {
     type: String,
-    required: [true, "The parent comment field is required"],
     default: null,
   },
   publishDate: {

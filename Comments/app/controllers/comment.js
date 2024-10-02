@@ -1,6 +1,6 @@
 const Comment = require("../models/comment");
 
-exports.create = async (req, res) => {
+exports.create = async (req, res) => {  
   try {
     if (req.auth.userRole === "guest") {
       return res.status(403).json({
@@ -76,7 +76,7 @@ exports.getCommentsByAuthor = async (req, res) => {
         message: "Didn't find the comments you were looking for.",
       });
     }
-    res.status(200).json(comment);
+    res.status(200).json(comments);
   } catch (err) {
     res.status(500).json({
       message:
@@ -89,7 +89,7 @@ exports.getCommentsByAuthor = async (req, res) => {
 exports.update = async (req, res) => {
   try {
 
-    const commentCheck = await User.findById(req.params.id);
+    const commentCheck = await Comment.findById(req.params.id);
 
     if (!commentCheck) {
       return res.status(404).json({ message: "Comment not found." });
@@ -100,9 +100,7 @@ exports.update = async (req, res) => {
     }
 
     const {
-      author,
       content,
-      parentComment,
       upvotes
     } = req.body;
     const lastModifiedDate = Date.now();
@@ -111,9 +109,7 @@ exports.update = async (req, res) => {
         _id: req.params.id,
       },
       {
-        author,
       content,
-      parentComment,
       lastModifiedDate,
       upvotes
       },
@@ -131,7 +127,7 @@ exports.update = async (req, res) => {
 
 exports.delete = async (req, res) => {
   try {
-    const commentCheck = await Post.findById(req.params.id);
+    const commentCheck = await Comment.findById(req.params.id);
     if (!commentCheck) {
       return res.status(404).json({
         message: "Didn't find the comment you were looking for.",
@@ -143,11 +139,15 @@ exports.delete = async (req, res) => {
         message: "You do not have permission to delete this comment.",
       });
     }
-
+    const childComments = await Comment.find({ parentComment: req.params.id });
+    if (childComments.length > 0) {
+      await Comment.deleteMany({ parentComment: req.params.id });
+    }
     await Comment.findByIdAndDelete(req.params.id);
     res.status(200).json({
       message: "The fellowing comment has been deleted successfully.",
       comment: commentCheck,
+      childComments: childComments
     });
   } catch (err) {
     res.status(500).json({

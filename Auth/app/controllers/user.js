@@ -57,7 +57,7 @@ exports.update = async (req, res) => {
       return res.status(404).json({ message: "User not found." });
     }
 
-    if (userCheck._id !== req.auth.userId && req.auth.userRole !== "admin") {
+    if (userCheck.id !== req.auth.userId && req.auth.userRole !== "admin") {
       return res.status(403).json({ message: "You are not authorized to update this user." });
     }
 
@@ -85,14 +85,14 @@ exports.update = async (req, res) => {
 
 exports.delete = async (req, res) => {
   try {
-    const userCheck = await Post.findById(req.params.id);
+    const userCheck = await User.findById(req.params.id);
     if (!userCheck) {
       return res.status(404).json({
         message: "Didn't find the user you were looking for.",
       });
     }
 
-    if (userCheck._id !== req.auth.userId && req.auth.userRole !== "admin") {
+    if (userCheck.id !== req.auth.userId && req.auth.userRole !== "admin") {
       return res.status(403).json({
         message: "You do not have permission to delete this user.",
       });
