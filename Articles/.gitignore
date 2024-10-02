@@ -4,6 +4,3 @@ node_modules
 # Prevents environnement variables from getting uploaded to the repo
 .env
 env-config.json
-
-# Prevents uploaded images from getting uploaded to the repo
-/uploads
