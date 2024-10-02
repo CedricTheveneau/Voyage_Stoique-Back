@@ -6,25 +6,16 @@ exports.create = async (req, res) => {
       message: "You do not have permission to create a post.",
     });
   }
-  const err = req.file ? null : new Error("File upload failed.");
-
-  if (err instanceof multer.MulterError) {
-    return res.status(400).json({ message: err.message });
-  } else if (err) {
-    return res.status(500).json({ message: err.message });
-  }
 
   try {
     const {
       title,
+      cover,
       content,
       keywords,
       category,
       author
     } = req.body;
-    const cover = `${req.protocol}://${req.get("host")}/uploads/${
-      req.file.filename
-    }`;
     const post = new Post({
       title,
       cover,
@@ -130,7 +121,7 @@ exports.getPostsByAuthor = async (req, res) => {
         message: "Didn't find the posts you were looking for.",
       });
     }
-    res.status(200).json(post);
+    res.status(200).json(posts);
   } catch (err) {
     res.status(500).json({
       message:
@@ -142,30 +133,19 @@ exports.getPostsByAuthor = async (req, res) => {
 
 exports.update = async (req, res) => {
   try {
-    const post = await Post.findById(req.params.id);
-    if (!post) {
+    const postCheck = await Post.findById(req.params.id);
+    if (!postCheck) {
       return res.status(404).json({ message: "Post not found." });
     }
 
-    // Vérifie si l'utilisateur est l'auteur du post
-    if (post.author.toString() !== req.auth.userId && req.auth.userRole !== "admin") {
+    
+    if (postCheck.author.toString() !== req.auth.userId && req.auth.userRole !== "admin") {
       return res.status(403).json({ message: "You are not authorized to update this post." });
     }
-
-    // Vérifie si un fichier a été uploadé
-    if (req.file) {
-      if (post.cover) {
-        const oldImagePath = path.join(__dirname, "../..", post.cover);
-        fs.unlink(oldImagePath, (err) => {
-          if (err) console.error("Failed to delete old image:", err);
-        });
-      }
-      post.cover = req.file.path; // Mise à jour du chemin du cover
-    }
-
-    // Mise à jour des autres champs
+    
     const {
       title,
+      cover,
       content,
       keywords,
       category,
@@ -174,18 +154,25 @@ exports.update = async (req, res) => {
       savedNumber,
       reads
     } = req.body;
-
-    post.title = title;
-    post.content = content;
-    post.keywords = keywords;
-    post.category = category;
-    post.upvotes = upvotes;
-    post.comments = comments;
-    post.savedNumber = savedNumber;
-    post.reads = reads;
-    post.lastModifiedDate = Date.now(); // Date de dernière modification
-
-    await post.save();
+    const lastModifiedDate = Date.now();
+    const post = await Post.findOneAndUpdate(
+      {
+        _id: req.params.id,
+      },
+      {
+        title,
+        cover,
+        content,
+        keywords,
+        category,
+        upvotes,
+        comments,
+        savedNumber,
+        reads,
+        lastModifiedDate
+      },
+      { returnDocument: "after" }
+    );
     res.status(200).json(post);
   } catch (err) {
     res.status(500).json({
@@ -196,7 +183,7 @@ exports.update = async (req, res) => {
 
 exports.delete = async (req, res) => {
   try {
-    // Recherche du post par ID
+    
     const post = await Post.findById(req.params.id);
     if (!post) {
       return res.status(404).json({
@@ -204,22 +191,14 @@ exports.delete = async (req, res) => {
       });
     }
 
-    // Vérification si l'utilisateur est l'auteur du post
+    
     if (post.author.toString() !== req.auth.userId && req.auth.userRole !== "admin") {
       return res.status(403).json({
         message: "You do not have permission to delete this post.",
       });
     }
 
-    // Suppression de l'image si elle existe
-    if (post.cover) {
-      const imagePath = path.join(__dirname, "../..", post.cover);
-      fs.unlink(imagePath, (err) => {
-        if (err) console.error("Failed to delete old image:", err);
-      });
-    }
-
-    // Suppression du post
+    
     await Post.findByIdAndDelete(req.params.id);
 
     res.status(200).json({
