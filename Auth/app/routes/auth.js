@@ -8,5 +8,6 @@ router.post("/login", userCtrl.login);
 router.put("/:id", auth, userCtrl.update);
 router.delete("/:id",auth, userCtrl.delete);
 router.get("/info", auth, userCtrl.getUserInfoFromToken);
+router.get("/:id", userCtrl.getUserById);
 
 module.exports = router;
