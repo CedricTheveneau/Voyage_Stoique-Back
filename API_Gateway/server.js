@@ -9,11 +9,13 @@ const proxyURIArticles = process.env.PROXY_URI_ARTICLES;
 const proxyURIComments = process.env.PROXY_URI_COMMENTS;
 const proxyURIPosts = process.env.PROXY_URI_POSTS;
 
+const allowedOrigins = process.env.CORS_ORIGIN.split(',');
+
 const app = express();
 app.use(express.json());
 
 const corsOptions = {
-  origin: process.env.CORS_ORIGIN,
+  origin: allowedOrigins,
   optionsSuccessStatus: 200,
 };
 
