@@ -1,4 +1,5 @@
 const Comment = require("../models/comment");
+const mongoose = require("mongoose");
 
 exports.create = async (req, res) => {  
   try {
@@ -9,11 +10,13 @@ exports.create = async (req, res) => {
     }
     const {
       author,
+      authorUsername,
       content,
       parentComment,
     } = req.body;
     const comment = new Comment({
       author,
+      authorUsername,
       content,
       parentComment,
     });
@@ -86,6 +89,77 @@ exports.getCommentsByAuthor = async (req, res) => {
   }
 };
 
+exports.getCommentsByIds = async (req, res) => {
+  const ids = req.query.ids;
+  
+  if (!ids) {
+    return res.status(400).json({ message: "Aucun ID fourni." });
+  }
+
+  const idArray = Array.isArray(ids) ? ids : ids.split(',');
+
+  try {
+    const validIds = idArray.map(id => {
+      if (mongoose.Types.ObjectId.isValid(id)) {
+        return new mongoose.Types.ObjectId(id);
+      } else {
+        throw new Error(`ID non valide : ${id}`);
+      }
+    });
+
+    const comments = await Comment.find({ _id: { $in: validIds } });
+    return res.status(200).json(comments);
+  } catch (error) {
+    console.error("Erreur lors de la récupération des commentaires :", error);
+    return res.status(500).json({ message: "Erreur lors de la récupération des commentaires." });
+  }
+};
+
+exports.upvote = async (req, res) => {
+  try {
+    if (req.auth.userRole === "guest") {
+      return res.status(403).json({
+        message: "You do not have permission to update this comment.",
+      });
+    }
+    const check = await Comment.findById(req.params.id)
+    if (!check) {
+      return res.status(404).json({
+        message: "Didn't find the comment you were looking for.",
+      });
+    }
+    if (check.upvotes.includes(req.auth.userId)) {
+      const comment = await Comment.findOneAndUpdate(
+        {
+          _id: req.params.id,
+        },
+        {
+          $pull: { upvotes: req.auth.userId },
+        },
+        { new: true }
+      );
+      res.status(200).json(comment.upvotes);
+    } else {
+      const comment = await Comment.findOneAndUpdate(
+      {
+        _id: req.params.id,
+      },
+      {
+        $push: { upvotes: req.auth.userId },
+      },
+      { new: true }
+    );
+    res.status(200).json(comment.upvotes);
+    }
+  } catch (err) {
+    res.status(500).json({
+      message:
+        err.message ||
+        "Something wrong happened with your request to update your comment.",
+    });
+  }
+};
+
 exports.update = async (req, res) => {
   try {
 
@@ -101,6 +175,7 @@ exports.update = async (req, res) => {
 
     const {
       content,
+      authorUsername,
       upvotes
     } = req.body;
     const lastModifiedDate = Date.now();
@@ -110,6 +185,7 @@ exports.update = async (req, res) => {
       },
       {
       content,
+      authorUsername,
       lastModifiedDate,
       upvotes
       },

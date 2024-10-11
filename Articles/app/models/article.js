@@ -64,7 +64,7 @@ const articleSchema = new mongoose.Schema({
     default: [],
   },
   comments: {
-    type: [Number],
+    type: [String],
     required: [true, "The comments field is required"],
     default: [],
   },

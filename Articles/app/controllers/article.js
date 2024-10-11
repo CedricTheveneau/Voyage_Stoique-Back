@@ -193,7 +193,8 @@ exports.upvote = async (req, res) => {
         },
         {
           $pull: { upvotes: req.auth.userId },
-        }
+        },
+        { new: true }
       );
       res.status(200).json(article.upvotes);
     } else {
@@ -203,13 +204,11 @@ exports.upvote = async (req, res) => {
       },
       {
         $push: { upvotes: req.auth.userId },
-      }
+      },
+      { new: true }
     );
     res.status(200).json(article.upvotes);
     }
-    
-    
-    
   } catch (err) {
     res.status(500).json({
       message:
@@ -231,31 +230,18 @@ exports.comment = async (req, res) => {
       return res.status(404).json({
         message: "Didn't find the article you were looking for.",
       });
-    }
-    if (check.upvotes.includes(req.auth.userId)) {
+    } else {
       const article = await Article.findOneAndUpdate(
         {
           _id: req.params.id,
         },
         {
-          $pull: { upvotes: req.auth.userId },
-        }
+          $push: { comments: req.body.commentId },
+        },
+        { new: true }
       );
-      res.status(200).json(article.upvotes);
-    } else {
-      const article = await Article.findOneAndUpdate(
-      {
-        _id: req.params.id,
-      },
-      {
-        $push: { upvotes: req.auth.userId },
-      }
-    );
-    res.status(200).json(article.upvotes);
+      res.status(200).json(article.comments);
     }
-    
-    
-    
   } catch (err) {
     res.status(500).json({
       message:
@@ -278,26 +264,28 @@ exports.save = async (req, res) => {
         message: "Didn't find the article you were looking for.",
       });
     }
-    if (check.upvotes.includes(req.auth.userId)) {
+    if (check.savedNumber.includes(req.auth.userId)) {
       const article = await Article.findOneAndUpdate(
         {
           _id: req.params.id,
         },
         {
-          $pull: { upvotes: req.auth.userId },
-        }
+          $pull: { savedNumber: req.auth.userId },
+        },
+        { new: true }
       );
-      res.status(200).json(article.upvotes);
+      res.status(200).json(article.savedNumber);
     } else {
       const article = await Article.findOneAndUpdate(
       {
         _id: req.params.id,
       },
       {
-        $push: { upvotes: req.auth.userId },
-      }
+        $push: { savedNumber: req.auth.userId },
+      },
+      { new: true }
     );
-    res.status(200).json(article.upvotes);
+    res.status(200).json(article.savedNumber);
     }
     
     
