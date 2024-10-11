@@ -58,6 +58,119 @@ exports.login = async (req, res) => {
   }
 };
 
+exports.saveArticle = async (req, res) => {
+  try {
+    const userCheck = await User.findById(req.params.id);
+
+    if (!userCheck) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    if (userCheck.id !== req.auth.userId && req.auth.userRole !== "admin") {
+      return res.status(403).json({ message: "You are not authorized to update this user." });
+    }
+
+    if (userCheck.savedArticles.includes(req.body.savedArticles)) {
+      const user = await User.findOneAndUpdate(
+        {
+          _id: req.params.id,
+        },
+        {
+          $pull: { savedArticles: req.body.savedArticles },
+        },
+        { new: true }
+      );
+      res.status(200).json(user.savedArticles);
+    } else {
+      const user = await User.findOneAndUpdate(
+      {
+        _id: req.params.id,
+      },
+      {
+        $push: { savedArticles: req.body.savedArticles },
+      },
+      { new: true }
+    );
+    res.status(200).json(user.savedArticles);
+    }
+  } catch (err) {
+    res.status(500).json({
+      message:
+        err.message ||
+        "Something wrong happened with your request to update your user.",
+    })}};
+
+    exports.upvoteArticle = async (req, res) => {
+      try {
+        const userCheck = await User.findById(req.params.id);
+    
+        if (!userCheck) {
+          return res.status(404).json({ message: "User not found." });
+        }
+    
+        if (userCheck.id !== req.auth.userId && req.auth.userRole !== "admin") {
+          return res.status(403).json({ message: "You are not authorized to update this user." });
+        }
+    
+        if (userCheck.upvotedArticles.includes(req.body.upvotedArticles)) {
+          const user = await User.findOneAndUpdate(
+            {
+              _id: req.params.id,
+            },
+            {
+              $pull: { upvotedArticles: req.body.upvotedArticles },
+            },
+            { new: true }
+          );
+          res.status(200).json(user.upvotedArticles);
+        } else {
+          const user = await User.findOneAndUpdate(
+          {
+            _id: req.params.id,
+          },
+          {
+            $push: { upvotedArticles: req.body.upvotedArticles },
+          },
+          { new: true }
+        );
+        res.status(200).json(user.upvotedArticles);
+        }
+      } catch (err) {
+        res.status(500).json({
+          message:
+            err.message ||
+            "Something wrong happened with your request to update your user.",
+        })}};
+
+        exports.articlesHistory = async (req, res) => {
+          try {
+            const userCheck = await User.findById(req.params.id);
+        
+            if (!userCheck) {
+              return res.status(404).json({ message: "User not found." });
+            }
+        
+            if (userCheck.id !== req.auth.userId && req.auth.userRole !== "admin") {
+              return res.status(403).json({ message: "You are not authorized to update this user." });
+            }
+        
+              const user = await User.findOneAndUpdate(
+              {
+                _id: req.params.id,
+              },
+              {
+                $push: { articlesHistory: req.body.articlesHistory },
+              },
+              { new: true }
+            );
+            res.status(200).json(user.articlesHistory);
+          } catch (err) {
+            res.status(500).json({
+              message:
+                err.message ||
+                "Something wrong happened with your request to update your user.",
+            })}};
+
 exports.update = async (req, res) => {
   try {
     const userCheck = await User.findById(req.params.id);

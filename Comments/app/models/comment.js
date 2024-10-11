@@ -6,6 +6,10 @@ const commentSchema = new mongoose.Schema({
     type: String,
     required: [true, "The author field is required"],
   },
+  authorUsername: {
+    type: String,
+    required: [true, "The author username field is required"],
+  },
   content: {
     type: String,
     required: [true, "The content field is required"],
