@@ -12,5 +12,6 @@ router.put("/articlesHistory/:id", auth, userCtrl.articlesHistory);
 router.delete("/:id",auth, userCtrl.delete);
 router.get("/info", auth, userCtrl.getUserInfoFromToken);
 router.get("/:id", userCtrl.getUserById);
+router.get("/confirm-email/:token", userCtrl.confirmEmail);
 
 module.exports = router;
