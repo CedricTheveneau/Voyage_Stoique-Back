@@ -23,6 +23,11 @@ const userSchema = new mongoose.Schema({
       message: "Please fill in a valid email adress",
     },
   },
+  emailConfirmed: {
+    type: Boolean,
+    default: false
+  },
+  confirmationToken: String,
   password: {
     type: String,
     required: [true, "The password field is required"],
