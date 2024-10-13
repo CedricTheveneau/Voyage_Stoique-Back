@@ -124,6 +124,43 @@ exports.getArticlesByCategory = async (req, res) => {
   }
 };
 
+exports.getArticleRecommendations = async (req, res) => {
+  try {
+    const articleId = req.params.id;
+    const userId = req.auth.userId;
+    
+    // Vérifier si l'article demandé existe
+    const currentArticle = await Article.findById(articleId);
+    if (!currentArticle) {
+      return res.status(404).json({ message: 'Article introuvable.' });
+    }
+    
+    let recommendations = await Article.find({
+      _id: { $ne: articleId },
+      category: currentArticle.category,
+      reads: { $ne: userId }
+    })
+    .limit(3);
+
+    if (recommendations.length < 3) {
+      const additionalArticles = await Article.find({
+        _id: {
+          $nin: [...recommendations.map((art) => art._id), articleId], // Exclure l'ID de l'article actuel
+        },
+      })
+        .sort({ upvotes: -1 })
+        .limit(3 - recommendations.length)
+        .lean();
+
+      recommendations = recommendations.concat(additionalArticles);
+    }
+    res.status(200).json(recommendations);
+  } catch (error) {
+    console.error('Erreur lors de la récupération des recommandations :', error);
+    res.status(500).json({ message: 'Erreur serveur.' });
+  }
+};
+
 exports.updateAdmin = async (req, res) => {
   try {
     if (req.auth.userRole !== "admin") {

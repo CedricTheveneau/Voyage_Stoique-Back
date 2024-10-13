@@ -8,6 +8,7 @@ router.get("/admin/", bouncer, articleCtrl.getAll);
 router.get("/:id", bouncer, articleCtrl.getArticle);
 router.get("/keyword/:keyword", bouncer, articleCtrl.getArticlesByKeyword);
 router.get("/category/:category", bouncer, articleCtrl.getArticlesByCategory);
+router.get("/recommendations/:id", bouncer, articleCtrl.getArticleRecommendations);
 router.put("/admin/:id", bouncer, articleCtrl.updateAdmin);
 router.put("/upvote/:id", bouncer, articleCtrl.upvote);
 router.put("/comment/:id", bouncer, articleCtrl.comment);
