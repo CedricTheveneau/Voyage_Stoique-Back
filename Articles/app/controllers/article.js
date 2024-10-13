@@ -1,4 +1,5 @@
 const Article = require("../models/article");
+const mongoose = require('mongoose');
 
 exports.create = async (req, res) => {
   try {
@@ -67,20 +68,76 @@ exports.getArticle = async (req, res) => {
         message: "Didn't find the article you were looking for.",
       });
     }
-    const readArticle = await Article.findOneAndUpdate(
+    if (!article.reads.includes(req.auth.userId)) {
+          article = await Article.findOneAndUpdate(
       { _id: req.params.id },
       {
         $push: { reads: req.auth.userId },
       },
       { returnDocument: "after" }
     );
-    res.status(200).json(readArticle);
+    }
+
+    res.status(200).json(article);
   } catch (err) {
     res.status(500).json({
       message:
         err.message ||
         "Something wrong happened with your request to retrieve your article.",
     });
+  }
+};
+
+exports.getArticlesByIds = async (req, res) => {
+  const ids = req.query.ids;
+  console.log(ids);
+  
+  if (!ids) {
+    return res.status(400).json({ message: "Aucun ID fourni." });
+  }
+
+  const idArray = Array.isArray(ids) ? ids : ids.split(',');
+
+  try {
+    const validIds = idArray.map(id => {
+      if (mongoose.Types.ObjectId.isValid(id)) {
+        return new mongoose.Types.ObjectId(id);
+      } else {
+        throw new Error(`ID non valide : ${id}`);
+      }
+    });
+
+    const articles = await Article.find({ _id: { $in: validIds } });
+    return res.status(200).json(articles);
+  } catch (error) {
+    console.error("Erreur lors de la récupération des articles :", error);
+    return res.status(500).json({ message: "Erreur lors de la récupération des articles." });
+  }
+};
+
+exports.getArticlesByQuery = async (req, res) => {
+  try {
+    const { q } = req.query; // Récupère le paramètre de recherche
+
+    if (!q) {
+      return res.status(400).json({ message: "Aucun terme de recherche fourni" });
+    }
+
+    const query = {
+      $or: [
+        { keywords: { $regex: q, $options: "i" } },
+        { category: { $regex: q, $options: "i" } },
+        { title: { $regex: q, $options: "i" } },
+        { intro: { $regex: q, $options: "i" } },
+        { content: { $regex: q, $options: "i" } },
+      ],
+    };
+
+    const articles = await Article.find(query);
+    return res.status(200).json(articles);
+  } catch (error) {
+    console.error("Erreur lors de la recherche d'articles :", error);
+    return res.status(500).json({ message: "Erreur interne du serveur" });
   }
 };
 
