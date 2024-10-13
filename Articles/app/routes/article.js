@@ -5,6 +5,8 @@ const bouncer = require("../middlewares/bouncer.js");
 
 router.post("/create", bouncer, articleCtrl.create);
 router.get("/admin/", bouncer, articleCtrl.getAll);
+router.get("/by-ids", bouncer, articleCtrl.getArticlesByIds);
+router.get("/search", bouncer, articleCtrl.getArticlesByQuery);
 router.get("/:id", bouncer, articleCtrl.getArticle);
 router.get("/keyword/:keyword", bouncer, articleCtrl.getArticlesByKeyword);
 router.get("/category/:category", bouncer, articleCtrl.getArticlesByCategory);
