@@ -24,7 +24,18 @@ exports.register = async (req, res) => {
 
     // Envoie de l'email de confirmation
     const confirmationUrl = `${process.env.FRONTEND_URL}/confirm-email/${confirmationToken}`;
-    sendConfirmationEmail(user.email, confirmationUrl);
+    const deleteUrl = `${process.env.FRONTEND_URL}/confirm-email/${confirmationToken}`;
+    const subject = "Voyage Stoïque | Activez votre compte";
+  const htmlContent = `
+    <h1 style="text-align:center;color:#141414;">Merci de l'intérêt que vous portez à Voyage Stoïque !</h1>
+    <h2 style="text-align:center;color:#141414;">Nous sommes plus que ravis de voir que vous souhaitez rejoindre notre communauté.</h2><br/><br/>
+    <p style="text-align:justify;color:#141414;">Votre compte a bien été créé, cependant, pour l'activer, nous vous prions de bien vouloir confirmer votre email. Pour ce faire, il vous suffit de cliquer sur le lien ci-dessous :</p>
+    <a style="color:#B0ABED;text-decoration:underline;font-weight:bold;font-style:italic;font-size:18px;text-transform:uppercase;" href="${confirmationUrl}">Je confirme mon adresse e-mail !</a><br/><br/><br/>
+    <p style="text-align:justify;color:#141414;">Par ailleurs, dans le cas où vous n'auriez pas activé votre compte d'ici une semaine, votre compte et toutes les données vous concernant se verraient être supprimés de nos bases de données.</p><br/><br/><br/>
+    <h2>À très bientôt !</h2><br/><br/>
+    <p style="font-weight:bold;font-style:italic;text-align:right;display:block;">L'équipe Voyage Stoïque</p>
+  `;
+    sendConfirmationEmail(user.email, subject, htmlContent);
 
     res.status(201).json(user);
   } catch (err) {
@@ -51,6 +62,19 @@ exports.confirmEmail = async (req, res) => {
     user.emailConfirmed = true;
     user.confirmationToken = undefined; // supprimer le token après validation
     await user.save();
+
+    const subject = "Voyage Stoïque | Compte active";
+  const htmlContent = `
+    <h1 style="text-align:center;color:#141414;">C'est officiel, vous êtes un membre de la communauté Voyage Stoïque !</h1>
+    <h2 style="text-align:center;color:#141414;">Maintenant que votre compte est activé, vous pouvez bénéficier de tout ce que la plateforme a à vous offrir.</h2><br/><br/>
+    <p style="text-align:justify;color:#141414;">Pour vous connecter et découvrir tout notre contenu, vous n'avez qu'à cliquer juste en dessous ! </p>
+    <a style="color:#B0ABED;text-decoration:underline;font-weight:bold;font-style:italic;font-size:18px;text-transform:uppercase;" href="https://voyage-stoique.com/login">Je me connecte !</a><br/><br/><br/>
+    <p style="text-align:justify;color:#141414;">Ah, et une dernière chose, nous avons une newsletter qui part tous les samedi à 10h du matin.<br/>Si cela vous intéresse, vous pouvez vous abonner à nos newsletter via les paramètres de votre profil ou en cliquant sur le bouton présent dans chacun de nos articles.</p>
+    <a style="color:#B0ABED;text-decoration:underline;font-weight:bold;font-style:italic;font-size:18px;text-transform:uppercase;" href="https://voyage-stoique.com/profile/${user._id}">Je veux voir mon profil !</a>*<br/>* Vous devez être connecté pour accéder à votre profil<br/><br/><br/>
+    <h2>À très bientôt !</h2><br/><br/>
+    <p style="font-weight:bold;font-style:italic;text-align:right;display:block;">L'équipe Voyage Stoïque</p>
+  `;
+    sendConfirmationEmail(user.email, subject, htmlContent);
 
     res.status(200).json({ message: "Email confirmed! You can now log in." });
   } catch (err) {
