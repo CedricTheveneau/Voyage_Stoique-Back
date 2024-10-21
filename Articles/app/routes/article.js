@@ -5,11 +5,13 @@ const bouncer = require("../middlewares/bouncer.js");
 
 router.post("/create", bouncer, articleCtrl.create);
 router.get("/admin/", bouncer, articleCtrl.getAll);
-router.get("/by-ids", bouncer, articleCtrl.getArticlesByIds);
-router.get("/search", bouncer, articleCtrl.getArticlesByQuery);
-router.get("/:id", bouncer, articleCtrl.getArticle);
-router.get("/keyword/:keyword", bouncer, articleCtrl.getArticlesByKeyword);
-router.get("/category/:category", bouncer, articleCtrl.getArticlesByCategory);
+router.get("/latest", articleCtrl.getLatest);
+router.get("/recent", articleCtrl.getNextArticles);
+router.get("/by-ids", articleCtrl.getArticlesByIds);
+router.get("/search", articleCtrl.getArticlesByQuery);
+router.get("/:id", articleCtrl.getArticle);
+router.get("/keyword/:keyword", articleCtrl.getArticlesByKeyword);
+router.get("/category/:category", articleCtrl.getArticlesByCategory);
 router.get("/recommendations/:id", bouncer, articleCtrl.getArticleRecommendations);
 router.put("/admin/:id", bouncer, articleCtrl.updateAdmin);
 router.put("/upvote/:id", bouncer, articleCtrl.upvote);

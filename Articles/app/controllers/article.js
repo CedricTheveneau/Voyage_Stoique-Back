@@ -58,6 +58,49 @@ exports.getAll = async (req, res) => {
   }
 };
 
+exports.getLatest = async (req, res) => {
+  try {
+    let article = await Article.findOne().sort({ publishDate: -1 });
+
+    if (!article) {
+      return res.status(404).json({
+        message: "Didn't find any article.",
+      });
+    }
+
+    res.status(200).json(article);
+  } catch (err) {
+    res.status(500).json({
+      message:
+        err.message ||
+        "Something wrong happened with your request to retrieve the article.",
+    });
+  }
+};
+
+exports.getNextArticles = async (req, res) => {
+  try {
+    let articles = await Article.find()
+      .sort({ publishDate: -1 })
+      .skip(1) 
+      .limit(6);
+
+    if (articles.length === 0) {
+      return res.status(404).json({
+        message: "Didn't find any articles.",
+      });
+    }
+
+    res.status(200).json(articles);
+  } catch (err) {
+    res.status(500).json({
+      message:
+        err.message ||
+        "Something wrong happened with your request to retrieve the articles.",
+    });
+  }
+};
+
 exports.getArticle = async (req, res) => {
   try {
     let article = await Article.findOne({
@@ -68,16 +111,17 @@ exports.getArticle = async (req, res) => {
         message: "Didn't find the article you were looking for.",
       });
     }
-    if (!article.reads.includes(req.auth.userId)) {
+    if (req.userId) {
+          if (!article.reads.includes(req.userId)) {
           article = await Article.findOneAndUpdate(
       { _id: req.params.id },
       {
-        $push: { reads: req.auth.userId },
+        $push: { reads: req.userId },
       },
       { returnDocument: "after" }
     );
     }
-
+    }
     res.status(200).json(article);
   } catch (err) {
     res.status(500).json({
@@ -90,7 +134,6 @@ exports.getArticle = async (req, res) => {
 
 exports.getArticlesByIds = async (req, res) => {
   const ids = req.query.ids;
-  console.log(ids);
   
   if (!ids) {
     return res.status(400).json({ message: "Aucun ID fourni." });
@@ -185,14 +228,14 @@ exports.getArticleRecommendations = async (req, res) => {
   try {
     const articleId = req.params.id;
     const userId = req.auth.userId;
-    
+  
     // Vérifier si l'article demandé existe
     const currentArticle = await Article.findById(articleId);
     if (!currentArticle) {
       return res.status(404).json({ message: 'Article introuvable.' });
     }
-    
-    let recommendations = await Article.find({
+
+          let recommendations = await Article.find({
       _id: { $ne: articleId },
       category: currentArticle.category,
       reads: { $ne: userId }
