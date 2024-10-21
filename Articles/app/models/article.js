@@ -55,7 +55,7 @@ const articleSchema = new mongoose.Schema({
   },
   category: {
     type: String,
-    enum: ["user", "admin"],
+    enum: ["méditation", "portrait", "présentation d’œuvre", "concept", "analyse"],
     required: [true, "The category field is required"],
   },
   upvotes: {
