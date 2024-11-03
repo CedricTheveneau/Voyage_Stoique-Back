@@ -124,6 +124,66 @@ exports.login = async (req, res) => {
   }
 };
 
+exports.update = async (req, res) => {
+  try {
+    const userCheck = await User.findById(req.params.id);
+
+    if (!userCheck) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    if (userCheck.id !== req.auth.userId && req.auth.userRole !== "admin") {
+      return res
+        .status(403)
+        .json({ message: "You are not authorized to update this user." });
+    }
+
+    const {
+      username,
+      email,
+      password,
+      birthday,
+      newsSubscription,
+      lastConnected,
+      upvotedArticles,
+      upvotedPosts,
+      savedArticles,
+      savedPosts,
+      articlesHistory,
+      postsHistory,
+      strikes,
+    } = req.body;
+    const user = await User.findOneAndUpdate(
+      {
+        _id: req.params.id,
+      },
+      {
+        username,
+        email,
+        password,
+        birthday,
+        newsSubscription,
+        lastConnected,
+        upvotedArticles,
+        upvotedPosts,
+        savedArticles,
+        savedPosts,
+        articlesHistory,
+        postsHistory,
+        strikes,
+      },
+      { returnDocument: "after" }
+    );
+    res.status(200).json(user);
+  } catch (err) {
+    res.status(500).json({
+      message:
+        err.message ||
+        "Something wrong happened with your request to update your user.",
+    });
+  }
+};
+
 exports.saveArticle = async (req, res) => {
   try {
     const userCheck = await User.findById(req.params.id);
@@ -254,7 +314,43 @@ exports.articlesHistory = async (req, res) => {
   }
 };
 
-exports.update = async (req, res) => {
+exports.removeArticleByIds = async (req, res) => {
+  const userIds = req.query.ids ? req.query.ids.split(',') : [];
+  const articleId = req.body.articleId
+
+  if (req.auth.userRole !== "admin") {
+    return res
+      .status(403)
+      .json({ message: "You are not authorized to update the users." });
+  }
+
+  if (userIds.length === 0) {
+    return res.status(400).json({ message: "Aucun ID utilisateur fourni." });
+  }
+
+  try {
+    await User.updateMany(
+      { _id: { $in: userIds } },
+      {
+        $pull: {
+          upvotedArticles: articleId,
+          savedArticles: articleId,
+          articlesHistory: articleId,
+        },
+      }
+    );
+
+    res.status(200).json({
+      message: "Les utilisateurs ont été mis à jour avec succès.",
+    });
+  } catch (err) {
+    res.status(500).json({
+      message: err.message || "Une erreur s'est produite lors de la mise à jour des utilisateurs.",
+    });
+  }
+};
+
+exports.savePost = async (req, res) => {
   try {
     const userCheck = await User.findById(req.params.id);
 
@@ -268,48 +364,154 @@ exports.update = async (req, res) => {
         .json({ message: "You are not authorized to update this user." });
     }
 
-    const {
-      username,
-      email,
-      password,
-      birthday,
-      newsSubscription,
-      lastConnected,
-      upvotedArticles,
-      upvotedPosts,
-      savedArticles,
-      savedPosts,
-      articlesHistory,
-      postsHistory,
-      strikes,
-    } = req.body;
-    const user = await User.findOneAndUpdate(
-      {
-        _id: req.params.id,
-      },
-      {
-        username,
-        email,
-        password,
-        birthday,
-        newsSubscription,
-        lastConnected,
-        upvotedArticles,
-        upvotedPosts,
-        savedArticles,
-        savedPosts,
-        articlesHistory,
-        postsHistory,
-        strikes,
-      },
-      { returnDocument: "after" }
-    );
-    res.status(200).json(user);
+    if (userCheck.savedPosts.includes(req.body.savedArticles)) {
+      const user = await User.findOneAndUpdate(
+        {
+          _id: req.params.id,
+        },
+        {
+          $pull: { savedPosts: req.body.savedArticles },
+        },
+        { new: true }
+      );
+      res.status(200).json(user.savedPosts);
+    } else {
+      const user = await User.findOneAndUpdate(
+        {
+          _id: req.params.id,
+        },
+        {
+          $push: { savedPosts: req.body.savedArticles },
+        },
+        { new: true }
+      );
+      res.status(200).json(user.savedPosts);
+    }
   } catch (err) {
     res.status(500).json({
       message:
         err.message ||
         "Something wrong happened with your request to update your user.",
+    });
+  }
+};
+
+exports.upvotePost = async (req, res) => {
+  try {
+    const userCheck = await User.findById(req.params.id);
+
+    if (!userCheck) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    if (userCheck.id !== req.auth.userId && req.auth.userRole !== "admin") {
+      return res
+        .status(403)
+        .json({ message: "You are not authorized to update this user." });
+    }
+
+    if (userCheck.upvotedPosts.includes(req.body.upvotedArticles)) {
+      const user = await User.findOneAndUpdate(
+        {
+          _id: req.params.id,
+        },
+        {
+          $pull: { upvotedPosts: req.body.upvotedArticles },
+        },
+        { new: true }
+      );
+      res.status(200).json(user.upvotedPosts);
+    } else {
+      const user = await User.findOneAndUpdate(
+        {
+          _id: req.params.id,
+        },
+        {
+          $push: { upvotedPosts: req.body.upvotedArticles },
+        },
+        { new: true }
+      );
+      res.status(200).json(user.upvotedPosts);
+    }
+  } catch (err) {
+    res.status(500).json({
+      message:
+        err.message ||
+        "Something wrong happened with your request to update your user.",
+    });
+  }
+};
+
+exports.postsHistory = async (req, res) => {
+  try {
+    const userCheck = await User.findById(req.params.id);
+
+    if (!userCheck) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    if (userCheck.id !== req.auth.userId && req.auth.userRole !== "admin") {
+      return res
+        .status(403)
+        .json({ message: "You are not authorized to update this user." });
+    }
+
+    let user = await User.findOneAndUpdate(
+      { _id: req.params.id },
+      { $pull: { postsHistory: req.body.articlesHistory } }
+    );
+
+    user = await User.findOneAndUpdate(
+      {
+        _id: req.params.id,
+      },
+      {
+        $push: { postsHistory: req.body.articlesHistory },
+      },
+      { new: true }
+    );
+    res.status(200).json(user.postsHistory);
+  } catch (err) {
+    res.status(500).json({
+      message:
+        err.message ||
+        "Something wrong happened with your request to update your user.",
+    });
+  }
+};
+
+exports.removePostByIds = async (req, res) => {
+  const userIds = req.query.ids ? req.query.ids.split(',') : [];
+  const articleId = req.body.articleId
+
+  if (req.auth.userRole === "guest") {
+    return res
+      .status(403)
+      .json({ message: "You are not authorized to update the users." });
+  }
+
+  if (userIds.length === 0) {
+    return res.status(400).json({ message: "Aucun ID utilisateur fourni." });
+  }
+
+  try {
+    await User.updateMany(
+      { _id: { $in: userIds } },
+      {
+        $pull: {
+          upvotedPosts: articleId,
+          savedPosts: articleId,
+          postsHistory: articleId,
+        },
+      }
+    );
+
+    res.status(200).json({
+      message: "Les utilisateurs ont été mis à jour avec succès.",
+    });
+  } catch (err) {
+    res.status(500).json({
+      message: err.message || "Une erreur s'est produite lors de la mise à jour des utilisateurs.",
     });
   }
 };
@@ -364,6 +566,24 @@ exports.getUserById = async (req, res) => {
     res.status(500).json({
       message:
         err.message || "An error accured while retreiving the user's data.",
+    });
+  }
+};
+
+exports.getAll = async (req, res) => {
+  try {
+    let users = await User.find();
+    res.status(200).json(users);
+    if (!users) {
+      return res.status(404).json({
+        message: "Didn't find any post.",
+      });
+    }
+  } catch (err) {
+    res.status(500).json({
+      message:
+        err.message ||
+        "Something wrong happened with your request to retrieve users.",
     });
   }
 };

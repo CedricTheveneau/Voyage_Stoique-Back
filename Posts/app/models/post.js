@@ -11,15 +11,14 @@ const postSchema = new mongoose.Schema({
   },
   cover: {
     type: String,
-    required: [true, "The cover field is required"],
-    unique: [true, "This image is already used by an existing article"],
     trim: true,
     lowercase: false,
+    default: "",
   },
   content: {
     type: String,
     required: [true, "The content field is required"],
-    unique: [true, "You are trying to copy an already existing article"],
+    unique: [true, "You are trying to copy an already existing post"],
     trim: true,
     lowercase: false,
   },
@@ -40,7 +39,7 @@ const postSchema = new mongoose.Schema({
   },
   category: {
     type: String,
-    enum: ["user", "admin"],
+    enum: ["méditation", "portrait", "présentation d’œuvre", "concept", "analyse"],
     required: [true, "The category field is required"],
   },
   upvotes: {
@@ -49,7 +48,7 @@ const postSchema = new mongoose.Schema({
     default: [],
   },
   comments: {
-    type: [Number],
+    type: [String],
     required: [true, "The comments field is required"],
     default: [],
   },
@@ -61,6 +60,10 @@ const postSchema = new mongoose.Schema({
   author: {
     type: String,
     required: [true, "The author field is required"],
+  },
+  authorUsername: {
+    type: String,
+    required: [true, "The author username field is required"],
   },
   reads: {
     type: [String],
