@@ -1,5 +1,13 @@
 const Article = require("../models/article");
 const mongoose = require('mongoose');
+require("dotenv").config();
+const cloudinary = require('cloudinary').v2;
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
 
 exports.create = async (req, res) => {
   try {
@@ -60,7 +68,7 @@ exports.getAll = async (req, res) => {
 
 exports.getLatest = async (req, res) => {
   try {
-    let article = await Article.findOne().sort({ publishDate: -1 });
+    let article = await Article.findOne().sort({ _id: -1 });
 
     if (!article) {
       return res.status(404).json({
@@ -81,7 +89,7 @@ exports.getLatest = async (req, res) => {
 exports.getNextArticles = async (req, res) => {
   try {
     let articles = await Article.find()
-      .sort({ publishDate: -1 })
+      .sort({ _id: -1 })
       .skip(1) 
       .limit(6);
 
@@ -101,6 +109,59 @@ exports.getNextArticles = async (req, res) => {
   }
 };
 
+exports.getTopArticles = async (req, res) => {
+  try {
+    const topArticles = await Article.aggregate([
+      {
+        $project: {
+          title: 1, // Inclure le titre dans le résultat
+          readsCount: { $size: "$reads" }, // Compte des lectures
+          upvotesCount: { $size: "$upvotes" }, // Compte des upvotes
+          commentsCount: { $size: "$comments" }, // Compte des commentaires
+          article: "$$ROOT", // Récupérer l'article entier
+        },
+      },
+      {
+        $addFields: {
+          score: {
+            $add: [
+              { $multiply: ["$upvotesCount", 100] }, // Poids pour les upvotes
+              { $multiply: ["$commentsCount", 10] },  // Poids pour les commentaires
+              "$readsCount", // Poids pour les lectures
+            ],
+          },
+        },
+      },
+      {
+        $sort: { score: -1 }, // Trier par score décroissant
+      },
+      {
+        $limit: 6, // Limiter à 6 articles
+      },
+      {
+        $replaceRoot: {
+          newRoot: {
+            $mergeObjects: [
+              "$article", // L'article entier
+              { 
+                score: "$score", // Ajouter le score
+                readsCount: "$readsCount", // Compte des lectures
+                upvotesCount: "$upvotesCount", // Compte des upvotes
+                commentsCount: "$commentsCount" // Compte des commentaires
+              }
+            ]
+          }
+        }
+      }
+    ]);
+
+    res.status(200).json(topArticles);
+  } catch (error) {
+    console.error('Erreur lors de la récupération des top articles :', error);
+    res.status(500).json({ message: 'Erreur serveur.' });
+  }
+};
+
 exports.getArticle = async (req, res) => {
   try {
     let article = await Article.findOne({
@@ -117,6 +178,37 @@ exports.getArticle = async (req, res) => {
       { _id: req.params.id },
       {
         $push: { reads: req.userId },
+      },
+      { returnDocument: "after" }
+    );
+    }
+    }
+    res.status(200).json(article);
+  } catch (err) {
+    res.status(500).json({
+      message:
+        err.message ||
+        "Something wrong happened with your request to retrieve your article.",
+    });
+  }
+};
+
+exports.addRead = async (req, res) => {
+  try {
+    let article = await Article.findOne({
+      _id: req.params.id,
+    });
+    if (!article) {
+      return res.status(404).json({
+        message: "Didn't find the article you were looking for.",
+      });
+    }
+    if (req.auth.userId) {
+          if (!article.reads.includes(req.auth.userId)) {
+          article = await Article.findOneAndUpdate(
+      { _id: req.params.id },
+      {
+        $push: { reads: req.auth.userId },
       },
       { returnDocument: "after" }
     );
@@ -226,34 +318,73 @@ exports.getArticlesByCategory = async (req, res) => {
 
 exports.getArticleRecommendations = async (req, res) => {
   try {
-    const articleId = req.params.id;
-    const userId = req.auth.userId;
-  
+    const articleId = req.params.id; // ID de l'article en cours
+    const userId = req.auth.userId; // ID de l'utilisateur
+
     // Vérifier si l'article demandé existe
     const currentArticle = await Article.findById(articleId);
     if (!currentArticle) {
       return res.status(404).json({ message: 'Article introuvable.' });
     }
 
-          let recommendations = await Article.find({
-      _id: { $ne: articleId },
-      category: currentArticle.category,
-      reads: { $ne: userId }
-    })
-    .limit(3);
-
-    if (recommendations.length < 3) {
-      const additionalArticles = await Article.find({
-        _id: {
-          $nin: [...recommendations.map((art) => art._id), articleId], // Exclure l'ID de l'article actuel
+    // 1. Rechercher des articles avec les mêmes mots-clés
+    let recommendations = await Article.aggregate([
+      {
+        $match: {
+          _id: { $ne: new mongoose.Types.ObjectId(articleId) }, // Exclure l'article en cours
+          reads: { $ne: userId },
         },
-      })
-        .sort({ upvotes: -1 })
-        .limit(3 - recommendations.length)
-        .lean();
+      },
+      {
+        $addFields: {
+          commonKeywords: {
+            $size: {
+              $setIntersection: ['$keywords', currentArticle.keywords],
+            },
+          },
+        },
+      },
+      {
+        $match: { commonKeywords: { $gt: 0 } }, // Articles avec des mots-clés en commun
+      },
+      {
+        $sort: { commonKeywords: -1 }, // Trier par nombre de mots-clés
+      },
+      {
+        $limit: 3, // Limiter à 3 articles
+      },
+    ]);
 
-      recommendations = recommendations.concat(additionalArticles);
+    // 2. Si moins de 3 articles sont trouvés, chercher par catégorie
+    if (recommendations.length < 3) {
+      const additionalByCategory = await Article.find({
+        _id: { $ne: new mongoose.Types.ObjectId(articleId) }, // Exclure l'article actuel
+        category: currentArticle.category,
+        reads: { $ne: userId },
+      })
+      .limit(3 - recommendations.length);
+
+      // Ajouter des articles de catégorie sans doublons
+      recommendations = recommendations.concat(additionalByCategory.filter(art => 
+        !recommendations.some(rec => rec._id.equals(art._id))
+      ));
     }
+
+    // 3. Si moins de 3 articles sont trouvés, chercher les articles populaires
+    if (recommendations.length < 3) {
+      const additionalPopularArticles = await Article.find({
+        _id: { $nin: recommendations.map((art) => art._id).concat(new mongoose.Types.ObjectId(articleId)) }, // Exclure l'article actuel
+      })
+      .sort({ upvotes: -1 })
+      .limit(3 - recommendations.length)
+      .lean();
+
+      recommendations = recommendations.concat(additionalPopularArticles.filter(art => 
+        !recommendations.some(rec => rec._id.equals(art._id))
+      ));
+    }
+
+    // Envoi des recommandations
     res.status(200).json(recommendations);
   } catch (error) {
     console.error('Erreur lors de la récupération des recommandations :', error);
@@ -275,7 +406,9 @@ exports.updateAdmin = async (req, res) => {
     const {
       title,
       intro,
+      cover,
       content,
+      audio,
       keywords,
       category,
       upvotes,
@@ -290,7 +423,9 @@ exports.updateAdmin = async (req, res) => {
       {
         title,
         intro,
+        cover,
         content,
+        audio,
         keywords,
         category,
         upvotes,
@@ -303,6 +438,32 @@ exports.updateAdmin = async (req, res) => {
       { returnDocument: "after" }
     );
     res.status(200).json(article);
+  } catch (err) {
+    res.status(500).json({
+      message: err.message || "Something went wrong with updating the article.",
+    });
+  }
+};
+
+exports.removeCommentsByIds = async (req, res) => {
+  try {
+    if (req.auth.userRole !== "admin" && req.auth.userRole !== "user") {
+      return res.status(403).json({
+        message: "You do not have permission to update this article.",
+      });
+    }
+    
+    const article = await Article.findById(req.body.id);
+    if (!article) {
+      return res.status(404).json({ message: "Article not found." });
+    }
+
+    const toDelete = req.query.ids.split(",");
+    article.comments = article.comments.filter(commentId => !toDelete.includes(commentId.toString()));
+
+    const updatedArticle = await article.save();
+
+    res.status(200).json(updatedArticle);
   } catch (err) {
     res.status(500).json({
       message: err.message || "Something went wrong with updating the article.",
@@ -460,5 +621,37 @@ exports.delete = async (req, res) => {
         err.message ||
         "Something wrong happened with your request to delete your article.",
     });
+  }
+};
+
+exports.deleteArticleFile = async (req, res) => {
+  const { fileUrl, resourceType } = req.body;
+
+  if (!fileUrl || !resourceType) {
+    return res.status(400).json({ message: 'fileUrl et resourceType sont requis.' });
+  }
+
+  try {
+    // Extraction du public_id à partir de l'URL
+    const urlSegments = fileUrl.split('/');
+    const publicIdWithExtension = urlSegments[urlSegments.length - 1];
+    const publicId = publicIdWithExtension.split('.')[0];
+
+    // Appel de la méthode destroy de Cloudinary
+    const options = { resource_type: resourceType };
+    cloudinary.uploader.destroy(publicId, options, (error, result) => {
+      if (error) {
+        console.error("Erreur lors de la suppression sur Cloudinary:", error.message);
+        return res.status(500).json({ message: 'La suppression du fichier sur Cloudinary a échoué.' });
+      }
+      if (result.result === "ok") {
+        return res.json({ message: 'Fichier supprimé avec succès de Cloudinary.' });
+      } else {
+        throw new Error('La suppression du fichier sur Cloudinary a échoué.');
+      }
+    });
+  } catch (error) {
+    console.error("Erreur lors de la suppression sur Cloudinary:", error.message);
+    return res.status(500).json({ message: error.message });
   }
 };
