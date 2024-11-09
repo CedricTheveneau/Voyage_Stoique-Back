@@ -4,13 +4,16 @@ const jwt = require("jsonwebtoken");
 const { sendConfirmationEmail } = require("../utils/emailUtils");
 const crypto = require("crypto");
 
+// Création de compte
 exports.register = async (req, res) => {
   try {
+    // Récupération des éléments dans le corps de requête
     const { username, email, password, birthday, newsSubscription } = req.body;
 
     // Génération d'un token de confirmation unique
     const confirmationToken = crypto.randomBytes(32).toString("hex");
 
+    // Création d'un nouvel utilisateur à partir des informations transmises dans la requête et ajout d'informations supplémentaires 
     const user = new User({
       username,
       email,
@@ -20,9 +23,10 @@ exports.register = async (req, res) => {
       confirmationToken, // ajout du token
       emailConfirmed: false, // email non confirmé par défaut
     });
+    // Sauvegarde de l'utilisateur en base de donnée
     await user.save();
 
-    // Envoie de l'email de confirmation
+    // Envoi de l'email de confirmation de création de compte
     const confirmationUrl = `${process.env.FRONTEND_URL}/confirm-email/${confirmationToken}`;
     const subject = "Voyage Stoïque | Activez votre compte";
   const htmlContent = `
@@ -36,8 +40,10 @@ exports.register = async (req, res) => {
   `;
     sendConfirmationEmail(user.email, subject, htmlContent);
 
+    // Réponse de l'API indiquant que la création du nouvel utilisateur a eu lieu avec l'utilisateur en question
     res.status(201).json(user);
   } catch (err) {
+    // Réponse de l'API indiquant que la création du nouvel utilisateur a échoué avec un message
     res.status(500).json({
       message:
         err.message ||
