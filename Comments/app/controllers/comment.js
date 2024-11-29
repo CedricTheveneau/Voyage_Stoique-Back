@@ -14,11 +14,15 @@ exports.create = async (req, res) => {
       content,
       parentComment,
     } = req.body;
+    const publishDate = Date.now()
+    const lastModifiedDate = Date.now()
     const comment = new Comment({
       author,
       authorUsername,
       content,
       parentComment,
+      publishDate,
+      lastModifiedDate,
     });
     await comment.save();
     res.status(201).json(comment);
