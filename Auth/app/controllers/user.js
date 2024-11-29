@@ -27,7 +27,7 @@ exports.register = async (req, res) => {
     await user.save();
 
     // Envoi de l'email de confirmation de création de compte
-    const confirmationUrl = `${process.env.FRONTEND_URL}/confirm-email/${confirmationToken}`;
+    const confirmationUrl = `${process.env.FRONTEND_URL}/emailConfirmation/${confirmationToken}`;
     const subject = "Voyage Stoïque | Activez votre compte";
   const htmlContent = `
     <h1 style="text-align:center;color:#141414;">Merci de l'intérêt que vous portez à Voyage Stoïque !</h1>
@@ -81,7 +81,10 @@ exports.confirmEmail = async (req, res) => {
   `;
     sendConfirmationEmail(user.email, subject, htmlContent);
 
-    res.status(200).json({ message: "Email confirmed! You can now log in." });
+    res.status(200).json({ message: {
+      title: 'Email confirmé !',
+      content: 'Votre compte a été activé et vous pouvez à présent vous connecter.'
+    }});
   } catch (err) {
     res.status(500).json({ message: "Error during email confirmation." });
   }
