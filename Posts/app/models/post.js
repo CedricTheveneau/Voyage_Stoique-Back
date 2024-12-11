@@ -39,7 +39,7 @@ const postSchema = new mongoose.Schema({
   },
   category: {
     type: String,
-    enum: ["méditation", "portrait", "présentation d’œuvre", "concept", "analyse"],
+    enum: ["méditation", "portrait", "présentation d’œuvre", "concept", "analyse", "mise à jour / nouvelle fonctionnalité"],
     required: [true, "The category field is required"],
   },
   upvotes: {
