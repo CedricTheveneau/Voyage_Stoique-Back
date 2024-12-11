@@ -1,7 +1,7 @@
 const User = require("../models/user");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const { sendConfirmationEmail } = require("../utils/emailUtils");
+const { sendConfirmationEmail, sendContactEmail } = require("../utils/emailUtils");
 const crypto = require("crypto");
 
 // Création de compte
@@ -593,6 +593,46 @@ exports.getAll = async (req, res) => {
       message:
         err.message ||
         "Something wrong happened with your request to retrieve users.",
+    });
+  }
+};
+
+// Envoi d'un mail de contact
+exports.contact = async (req, res) => {
+  try {
+    // Récupération des éléments dans le corps de requête
+    const { name, email, subject, content } = req.body;
+
+    const contactSubject = `Voyage Stoïque | ${subject} - ${name}`;
+    sendContactEmail(email, contactSubject, content);
+
+    // Envoi de l'email de confirmation de demande de contact
+    const emailSubject = "Voyage Stoïque | Confirmation de l'envoi de votre demande de contact";
+  const htmlContent = `
+    <h1 style="text-align:center;color:#141414;">${name}, nous avons bien reçu votre demande de contact !</h1>
+    <p style="text-align:center;color:#141414;"> Nous vous confirmons que votre demande de contact nous a bien été transmise. <strong>Nous reviendrons vers vous dans les deux jours ouvrés.</strong> Merci de l'intérêt que vous portez à Voyage Stoïque !</p><br/><br/>
+    <p style="text-align:justify;color:#141414;">Voici le récapitulatif de votre demande de contact :</p><br/><br/><br/>
+    <p style="margin-bottom:0px;">------------------------------------</p>
+    <h3>${subject}</h3>
+    ${content}
+    <br/><br/><br/>
+    <p style="margin-bottom:0px;">------------------------------------</p>
+    <h2>À très bientôt !</h2><br/><br/>
+    <p style="font-weight:bold;font-style:italic;text-align:right;display:block;">L'équipe Voyage Stoïque</p>
+  `;
+    sendConfirmationEmail(email, emailSubject, htmlContent);
+
+    // Réponse de l'API indiquant que la création du nouvel utilisateur a eu lieu avec l'utilisateur en question
+    res.status(201).json({message: {
+      title: 'Demande de contacte envoyéè !',
+      content: `Nous vous avons envoyé un email de récapitulatif de votre demande à l'adresse email utilisée (${email}).`
+    }});
+  } catch (err) {
+    // Réponse de l'API indiquant que la création du nouvel utilisateur a échoué avec un message
+    res.status(500).json({
+      message:
+        err.message ||
+        "Something wrong happened with your request to create a new user.",
     });
   }
 };
