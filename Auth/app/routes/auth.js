@@ -25,6 +25,7 @@ router.delete("/:id",auth, userCtrl.delete);
 router.get("/info", auth, userCtrl.getUserInfoFromToken);
 router.get("/users", userCtrl.getAll);
 router.get("/:id", userCtrl.getUserById);
+router.get("/username/:username", userCtrl.getUserByUsername);
 router.get("/confirm-email/:token", userCtrl.confirmEmail);
 
 module.exports = router;
