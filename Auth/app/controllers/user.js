@@ -75,7 +75,7 @@ exports.confirmEmail = async (req, res) => {
     <p style="text-align:justify;color:#141414;">Pour vous connecter et découvrir tout notre contenu, vous n'avez qu'à cliquer juste en dessous ! </p>
     <a style="color:#B0ABED;text-decoration:underline;font-weight:bold;font-style:italic;font-size:18px;text-transform:uppercase;" href="https://voyage-stoique.com/login">Je me connecte !</a><br/><br/><br/>
     <p style="text-align:justify;color:#141414;">Ah, et une dernière chose, nous avons une newsletter qui part tous les samedi à 10h du matin.<br/>Si cela vous intéresse, vous pouvez vous abonner à nos newsletter via les paramètres de votre profil ou en cliquant sur le bouton présent dans chacun de nos articles.</p>
-    <a style="color:#B0ABED;text-decoration:underline;font-weight:bold;font-style:italic;font-size:18px;text-transform:uppercase;" href="https://voyage-stoique.com/profile/${user._id}">Je veux voir mon profil !</a>*<br/>* Vous devez être connecté pour accéder à votre profil<br/><br/><br/>
+    <a style="color:#B0ABED;text-decoration:underline;font-weight:bold;font-style:italic;font-size:18px;text-transform:uppercase;" href="https://voyage-stoique.com/profile/${user.username}">Je veux voir mon profil !</a>*<br/>* Vous devez être connecté pour accéder à votre profil<br/><br/><br/>
     <h2>À très bientôt !</h2><br/><br/>
     <p style="font-weight:bold;font-style:italic;text-align:right;display:block;">L'équipe Voyage Stoïque</p>
   `;
@@ -570,6 +570,18 @@ exports.getUserInfoFromToken = (req, res) => {
 exports.getUserById = async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
+    res.status(200).json({ user });
+  } catch (err) {
+    res.status(500).json({
+      message:
+        err.message || "An error accured while retreiving the user's data.",
+    });
+  }
+};
+
+exports.getUserByUsername = async (req, res) => {
+  try {
+    const user = await User.findOne({ username: req.params.username });
     res.status(200).json({ user });
   } catch (err) {
     res.status(500).json({

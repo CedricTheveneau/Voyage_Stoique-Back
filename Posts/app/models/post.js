@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const uniqueValidator = require("mongoose-unique-validator");
+const slugify = require("slugify");
 
 const postSchema = new mongoose.Schema({
   title: {
@@ -21,6 +22,13 @@ const postSchema = new mongoose.Schema({
     unique: [true, "You are trying to copy an already existing post"],
     trim: true,
     lowercase: false,
+  },
+  slug: {
+    type: String,
+    required: [true, "The slug field is required"],
+    unique: [true, "You are trying to copy an already existing slug"],
+    trim: true,
+    lowercase: true,
   },
   publishDate: {
     type: Date,
@@ -73,6 +81,31 @@ const postSchema = new mongoose.Schema({
 });
 
 postSchema.plugin(uniqueValidator);
+
+postSchema.pre("validate", function (next) {
+  if (!this.slug && this.title) {
+    this.slug = slugify(this.title, { lower: true, strict: true });
+  }
+  next();
+});
+
+postSchema.pre("findOneAndUpdate", function (next) {
+  const update = this.getUpdate();
+  if (update.title) {
+    update.slug = slugify(update.title, { lower: true, strict: true });
+    if (this._conditions._id) {
+      update.slug = `${update.slug}-${this._conditions._id}`;
+    }
+  }
+  next();
+});
+
+postSchema.post("save", async function () {
+  if (!this.slug.includes(this._id)) {
+    this.slug = `${this.slug}-${this._id}`;
+    await this.save();
+  }
+});
 
 const Post = mongoose.model("Post", postSchema);
 
