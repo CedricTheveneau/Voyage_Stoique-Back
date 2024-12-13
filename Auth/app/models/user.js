@@ -102,6 +102,21 @@ const userSchema = new mongoose.Schema({
     default: 0,
     max: 3,
   }
+  // transactions: [
+  //   {
+  //     transactionId: { type: String, required: true },
+  //     amount: { type: Number, required: true }, // Montant en cents
+  //     currency: { type: String, required: true, default: "EUR" },
+  //     receiptUrl: { type: String },
+  //     status: { type: String, required: true },
+  //     paymentMethod: {
+  //       type: { type: String },
+  //       brand: { type: String },
+  //       last4: { type: String },
+  //     },
+  //     createdAt: { type: Number, default: () => Math.floor(Date.now() / 1000) },
+  //   },
+  // ],
 });
 
 userSchema.plugin(uniqueValidator);
