@@ -12,6 +12,8 @@ router.get('/swagger.json', (req, res) => {
 router.post("/register", userCtrl.register);
 router.post("/login", userCtrl.login);
 router.post("/contact", userCtrl.contact);
+router.post("/donate", auth, userCtrl.donate);
+router.post("/payment-success", auth, userCtrl.handlePaymentSuccess);
 router.put("/saveArticle/:id", auth, userCtrl.saveArticle);
 router.put("/upvoteArticle/:id", auth, userCtrl.upvoteArticle);
 router.put("/articlesHistory/:id", auth, userCtrl.articlesHistory);

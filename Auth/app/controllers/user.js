@@ -3,6 +3,7 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const { sendConfirmationEmail, sendContactEmail } = require("../utils/emailUtils");
 const crypto = require("crypto");
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 // Création de compte
 exports.register = async (req, res) => {
@@ -609,7 +610,6 @@ exports.getAll = async (req, res) => {
   }
 };
 
-// Envoi d'un mail de contact
 exports.contact = async (req, res) => {
   try {
     // Récupération des éléments dans le corps de requête
@@ -646,5 +646,65 @@ exports.contact = async (req, res) => {
         err.message ||
         "Something wrong happened with your request to create a new user.",
     });
+  }
+};
+
+exports.donate = async (req, res) => {
+  const { amount, currency = "EUR" } = req.body;
+
+  if (!amount || amount <= 0) {
+    return res.status(400).json({ message: "Invalid donation amount" });
+  }
+
+  try {
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount, // Montant en cents
+      currency,
+      payment_method_types: ["card"],
+    });
+
+    res.status(200).json({ 
+      clientSecret: paymentIntent.client_secret,
+      transactionId: paymentIntent.id 
+    });
+  } catch (error) {
+    console.error("Stripe error:", error.message);
+    res.status(500).json({ message: "Failed to create payment" });
+  }
+};
+
+exports.handlePaymentSuccess = async (req, res) => {
+  const { paymentIntentId } = req.body;
+
+  try {
+    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+
+    if (paymentIntent.status !== "succeeded") {
+      return res.status(400).json({ message: "Payment not successful" });
+    }
+
+    const user = await User.findById(req.user.id);
+
+    const newTransaction = {
+      transactionId: paymentIntent.id,
+      amount: paymentIntent.amount,
+      currency: paymentIntent.currency,
+      receiptUrl: paymentIntent.charges.data[0]?.receipt_url || "",
+      status: paymentIntent.status,
+      paymentMethod: {
+        type: paymentIntent.payment_method_types[0],
+        brand: paymentIntent.charges.data[0]?.payment_method_details.card.brand,
+        last4: paymentIntent.charges.data[0]?.payment_method_details.card.last4,
+      },
+      createdAt: paymentIntent.created,
+    };
+
+    user.transactions.push(newTransaction);
+    await user.save();
+
+    res.status(200).json({ message: "Donation recorded", transaction: newTransaction });
+  } catch (error) {
+    console.error("Error recording donation:", error.message);
+    res.status(500).json({ message: "Failed to record donation" });
   }
 };
